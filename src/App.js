@@ -22,8 +22,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 확인된 JavaScript 키
-const KAKAO_KEY = "4080c5f3d9bb80450755ae2530fd2fef";
+// 확인된 JavaScript 대표 키
+const KAKAO_KEY = "031da65ff98ab37bab536fcfc3ce4f03";
 
 export default function App() {
   const [surveys, setSurveys] = useState([]);
@@ -39,6 +39,7 @@ export default function App() {
     아빠: false,
     기타: false,
   });
+  const [memo, setMemo] = useState(""); // ✨ 새롭게 추가된 메모 상태
 
   const [newTitle, setNewTitle] = useState("");
   const [newDeadline, setNewDeadline] = useState("");
@@ -187,23 +188,41 @@ export default function App() {
     }
   };
 
+  // ✨ 참석자 제출 및 에러 검증 로직
   const handleSubmitResponse = async (e) => {
     e.preventDefault();
     if (!studentName) return alert("학생 이름을 입력해주세요.");
+
+    // ✨ 어른 인원수 vs 체크박스 개수 검증
+    const selectedTypesCount = Object.values(adultTypes).filter(Boolean).length;
+    
+    if (adultCount > 0 && selectedTypesCount !== adultCount) {
+      return alert(`❌ 어른 인원수(${adultCount}명)와 선택한 체크박스 항목(${selectedTypesCount}개)이 일치하지 않습니다.\n인원수에 맞게 엄마/아빠/기타를 정확히 체크해주세요.`);
+    }
+    if (adultCount === 0 && selectedTypesCount > 0) {
+      return alert("❌ 어른 인원이 0명일 경우 체크박스를 모두 해제해주세요.");
+    }
+
     const selectedTypes = Object.entries(adultTypes).filter(([_, v]) => v).map(([k]) => k).join(", ");
     let updatedResponses = [...(currentSurvey.responses || [])];
 
     if (editingResponseId) {
-      updatedResponses = updatedResponses.map((r) => r.id === editingResponseId ? { ...r, studentName, adultCount, childCount, adultTypes: selectedTypes } : r);
+      updatedResponses = updatedResponses.map((r) => r.id === editingResponseId ? { ...r, studentName, adultCount, childCount, adultTypes: selectedTypes, memo } : r);
       await updateDoc(doc(db, "surveys", activeSurveyId), { responses: updatedResponses });
       setEditingResponseId(null);
       alert("수정되었습니다.");
     } else {
-      updatedResponses = [{ id: Date.now(), studentName, adultCount, childCount, adultTypes: selectedTypes }, ...updatedResponses];
+      updatedResponses = [{ id: Date.now(), studentName, adultCount, childCount, adultTypes: selectedTypes, memo }, ...updatedResponses];
       await updateDoc(doc(db, "surveys", activeSurveyId), { responses: updatedResponses });
       alert("제출되었습니다.");
     }
-    setStudentName(""); setAdultCount(0); setChildCount(0); setAdultTypes({ 엄마: false, 아빠: false, 기타: false });
+    
+    // 입력창 초기화
+    setStudentName(""); 
+    setAdultCount(0); 
+    setChildCount(0); 
+    setAdultTypes({ 엄마: false, 아빠: false, 기타: false });
+    setMemo(""); // 메모 초기화
   };
 
   const handleDeleteResponse = async (responseId) => {
@@ -240,17 +259,26 @@ export default function App() {
     }
   };
 
+  // ✨ 합계 상세 계산 로직 (엄마/아빠 구분 추가)
   const calculateTotals = (responses = []) => {
     const adults = responses.reduce((s, r) => s + r.adultCount, 0);
     const children = responses.reduce((s, r) => s + r.childCount, 0);
-    return { adults, children, total: adults + children };
+    
+    let moms = 0;
+    let dads = 0;
+    responses.forEach(r => {
+      if (r.adultTypes && r.adultTypes.includes("엄마")) moms++;
+      if (r.adultTypes && r.adultTypes.includes("아빠")) dads++;
+    });
+
+    return { adults, children, total: adults + children, moms, dads };
   };
 
   const styles = {
     container: { maxWidth: "420px", margin: "0 auto", padding: "20px", backgroundColor: "#FFFBF5", minHeight: "100vh", fontFamily: "sans-serif" },
     card: { backgroundColor: "white", padding: "15px", borderRadius: "12px", marginBottom: "15px", boxShadow: "0 2px 6px rgba(0,0,0,0.03)" },
-    input: { width: "100%", padding: "12px", border: "1px solid #FED7AA", borderRadius: "8px", boxSizing: "border-box", marginBottom: "10px" },
-    primaryBtn: { width: "100%", padding: "15px", backgroundColor: "#EA580C", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" },
+    input: { width: "100%", padding: "12px", border: "1px solid #FED7AA", borderRadius: "8px", boxSizing: "border-box", marginBottom: "10px", fontSize: "0.95rem" },
+    primaryBtn: { width: "100%", padding: "15px", backgroundColor: "#EA580C", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer", fontSize: "1rem" },
     actionBtn: { fontSize: "0.75rem", padding: "4px 8px", marginLeft: "5px", borderRadius: "6px", border: "1px solid #FED7AA", backgroundColor: "#FFF7ED", color: "#EA580C", cursor: "pointer" },
     deleteBtn: { fontSize: "0.75rem", padding: "4px 8px", marginLeft: "5px", borderRadius: "6px", border: "1px solid #FECACA", backgroundColor: "#FEF2F2", color: "#DC2626", cursor: "pointer" },
     kakaoBtn: { width: "100%", padding: "14px", backgroundColor: "#FEE500", color: "#3C1E1E", border: "none", borderRadius: "12px", fontWeight: "bold", fontSize: "1rem", cursor: "pointer", marginBottom: "25px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" },
@@ -258,6 +286,7 @@ export default function App() {
 
   return (
     <div style={styles.container}>
+      {/* 1. 메인 대시보드 */}
       {viewMode === "dashboard" && (
         <>
           <div style={{ textAlign: "center", marginBottom: "20px" }}>
@@ -286,6 +315,7 @@ export default function App() {
         </>
       )}
 
+      {/* 2. 행사 만들기/수정하기 화면 */}
       {viewMode === "create" && (
         <div>
           <button onClick={() => setViewMode(isEditingEvent ? "survey" : "dashboard")} style={{ border: "none", background: "none", color: "#EA580C", fontWeight: "bold", cursor: "pointer", paddingBottom: "10px" }}>◀ 뒤로</button>
@@ -307,6 +337,7 @@ export default function App() {
         </div>
       )}
 
+      {/* 3. 명단 입력 & 확인 화면 */}
       {viewMode === "survey" && currentSurvey && (
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -326,37 +357,84 @@ export default function App() {
             </div>
           </div>
 
+          {/* ✨ 입력 폼 */}
           <div style={{ ...styles.card, border: editingResponseId ? "2px solid #EA580C" : "none" }}>
             {editingResponseId && <div style={{ color: "#EA580C", fontWeight: "bold", marginBottom: "10px" }}>✏️ 수정 중</div>}
+            
             <input style={styles.input} value={studentName} onChange={(e) => setStudentName(e.target.value)} placeholder="학생 이름" />
+            
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
               <span>어른: {adultCount}</span>
               <div><button onClick={() => setAdultCount(Math.max(0, adultCount - 1))}>-</button> <button onClick={() => setAdultCount(adultCount + 1)}>+</button></div>
             </div>
+            
+            {/* 체크박스 영역 */}
             {adultCount > 0 && (
-              <div style={{ display: "flex", gap: "10px", fontSize: "0.8rem" }}>
+              <div style={{ display: "flex", gap: "10px", fontSize: "0.8rem", backgroundColor: "#FFF7ED", padding: "10px", borderRadius: "8px", marginBottom: "10px" }}>
                 {["엄마", "아빠", "기타"].map((t) => (
                   <label key={t}><input type="checkbox" checked={adultTypes[t]} onChange={() => setAdultTypes({ ...adultTypes, [t]: !adultTypes[t] })} />{t} </label>
                 ))}
               </div>
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "15px" }}>
+            
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "15px", marginBottom: "15px" }}>
               <span>아이: {childCount}</span>
               <div><button onClick={() => setChildCount(Math.max(0, childCount - 1))}>-</button> <button onClick={() => setChildCount(childCount + 1)}>+</button></div>
             </div>
+
+            {/* ✨ 메모 입력칸 추가 */}
+            <input 
+              style={{ ...styles.input, marginBottom: "0", fontSize: "0.85rem", backgroundColor: "#F9FAFB", borderColor: "#E5E7EB" }} 
+              value={memo} 
+              onChange={(e) => setMemo(e.target.value)} 
+              placeholder="메모를 입력하세요 (사유, 알레르기 등)" 
+            />
           </div>
+          
           <button style={styles.primaryBtn} onClick={handleSubmitResponse}>{editingResponseId ? "수정 완료" : "제출하기"}</button>
 
+          {/* ✨ 실시간 명단 표시 */}
           <div style={{ marginTop: "30px" }}>
-            <h4 style={{ color: "#9A3412", borderBottom: "2px solid #FFEDD5", paddingBottom: "10px" }}>
+            <h4 style={{ color: "#9A3412", borderBottom: "2px solid #FFEDD5", paddingBottom: "10px", marginBottom: "15px" }}>
               실시간 명단 <span style={{ fontSize: "0.8rem", fontWeight: "normal", color: "#EA580C", display: "block", marginTop: "5px" }}>(제출 {currentSurvey.responses.length}가족 / 미제출 {Math.max(0, currentSurvey.targetFamilyCount - currentSurvey.responses.length)}가족)</span>
             </h4>
-            <p style={{ fontSize: "0.8rem", color: "#666", fontWeight: "bold" }}>합계: 어른 {calculateTotals(currentSurvey.responses).adults}명, 아이 {calculateTotals(currentSurvey.responses).children}명 (총 {calculateTotals(currentSurvey.responses).total}명)</p>
+            
+            {/* ✨ 변경된 합계 표시 */}
+            <div style={{ fontSize: "0.85rem", color: "#9A3412", fontWeight: "bold", backgroundColor: "#FFEDD5", padding: "10px", borderRadius: "8px", marginBottom: "15px" }}>
+              어른 {calculateTotals(currentSurvey.responses).adults}명(엄마 {calculateTotals(currentSurvey.responses).moms}명, 아빠 {calculateTotals(currentSurvey.responses).dads}명), 아이 {calculateTotals(currentSurvey.responses).children}명 [총 {calculateTotals(currentSurvey.responses).total}명]
+            </div>
+
             {currentSurvey.responses.map((r) => (
-              <div key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #EEE", fontSize: "0.85rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span><strong>{r.studentName}</strong>: 어른 {r.adultCount} ({r.adultTypes}) / 아이 {r.childCount}</span>
+              <div key={r.id} style={{ padding: "12px 0", borderBottom: "1px solid #EEE", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                  <button style={styles.actionBtn} onClick={() => { setStudentName(r.studentName); setAdultCount(r.adultCount); setChildCount(r.childCount); setEditingResponseId(r.id); window.scrollTo(0, 0); }}>수정</button>
+                  <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+                    <strong>{r.studentName}</strong> 
+                    <span style={{ fontSize: "0.8rem", color: "#666", marginLeft: "5px" }}>
+                      | {r.adultCount > 0 ? `어른 ${r.adultCount}명(${r.adultTypes})` : "어른 0명"}, 아이 {r.childCount}명
+                    </span>
+                  </div>
+                  {/* ✨ 입력한 메모가 예쁘게 출력되도록 UI 추가 */}
+                  {r.memo && (
+                    <div style={{ fontSize: "0.75rem", color: "#6B7280", backgroundColor: "#F3F4F6", padding: "4px 8px", borderRadius: "4px", display: "inline-block" }}>
+                      📝 {r.memo}
+                    </div>
+                  )}
+                </div>
+                <div style={{ whiteSpace: "nowrap", marginLeft: "10px" }}>
+                  <button style={styles.actionBtn} onClick={() => { 
+                    setStudentName(r.studentName); 
+                    setAdultCount(r.adultCount); 
+                    setChildCount(r.childCount); 
+                    setMemo(r.memo || ""); // 수정 시 기존 메모 불러오기
+                    const savedTypes = r.adultTypes || "";
+                    setAdultTypes({ 
+                      엄마: savedTypes.includes("엄마"), 
+                      아빠: savedTypes.includes("아빠"), 
+                      기타: savedTypes.includes("기타") 
+                    });
+                    setEditingResponseId(r.id); 
+                    window.scrollTo({ top: 0, behavior: "smooth" }); 
+                  }}>수정</button>
                   <button style={styles.deleteBtn} onClick={() => handleDeleteResponse(r.id)}>삭제</button>
                 </div>
               </div>
@@ -365,6 +443,7 @@ export default function App() {
         </div>
       )}
 
+      {/* 4. 이력 보기 */}
       {viewMode === "history" && (
         <div>
           <button onClick={() => setViewMode("dashboard")} style={{ border: "none", background: "none", color: "#EA580C", fontWeight: "bold", cursor: "pointer", paddingBottom: "10px" }}>◀ 돌아가기</button>
@@ -381,16 +460,26 @@ export default function App() {
         </div>
       )}
 
+      {/* 5. 이력 상세 */}
       {viewMode === "historyDetail" && currentSurvey && (
         <div>
           <button onClick={() => setViewMode("history")} style={{ border: "none", background: "none", color: "#EA580C", fontWeight: "bold", cursor: "pointer", paddingBottom: "10px" }}>◀ 목록으로</button>
           <div style={styles.card}>
             <h3 style={{ marginTop: 0 }}>{currentSurvey.title} (마감됨)</h3>
-            <p style={{ fontSize: "0.9rem", color: "#EA580C", fontWeight: "bold" }}>최종 참석: 어른 {calculateTotals(currentSurvey.responses).adults}, 아이 {calculateTotals(currentSurvey.responses).children} (총 {calculateTotals(currentSurvey.responses).total}명)</p>
+            
+            {/* ✨ 이력 화면에도 동일한 합계 텍스트 적용 */}
+            <div style={{ fontSize: "0.85rem", color: "#9A3412", fontWeight: "bold", backgroundColor: "#FFEDD5", padding: "10px", borderRadius: "8px", margin: "10px 0" }}>
+              어른 {calculateTotals(currentSurvey.responses).adults}명(엄마 {calculateTotals(currentSurvey.responses).moms}명, 아빠 {calculateTotals(currentSurvey.responses).dads}명), 아이 {calculateTotals(currentSurvey.responses).children}명 [총 {calculateTotals(currentSurvey.responses).total}명]
+            </div>
+            
             <hr style={{ border: "0.5px solid #EEE", margin: "15px 0" }} />
+            
             {currentSurvey.responses.map((r) => (
               <div key={r.id} style={{ padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "0.85rem" }}>
-                <strong>{r.studentName}</strong>: 어른 {r.adultCount} ({r.adultTypes}) / 아이 {r.childCount}
+                <div>
+                  <strong>{r.studentName}</strong>: {r.adultCount > 0 ? `어른 ${r.adultCount}명(${r.adultTypes})` : "어른 0명"} / 아이 {r.childCount}명
+                </div>
+                {r.memo && <div style={{ fontSize: "0.75rem", color: "#888", marginTop: "3px" }}>📝 {r.memo}</div>}
               </div>
             ))}
           </div>
