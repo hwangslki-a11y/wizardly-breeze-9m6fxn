@@ -2,15 +2,13 @@
   "name": "sonsan-parent-app",
   "version": "1.0.0",
   "dependencies": {
-    "ajv": "^6.12.6",
-    "ajv-keywords": "^3.5.2",
     "firebase": "^10.8.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1"
   },
   "overrides": {
-    "ajv-keywords": "3.5.2"
+    "ajv-keywords": "^3.5.2"
   },
   "scripts": {
     "start": "react-scripts start",
