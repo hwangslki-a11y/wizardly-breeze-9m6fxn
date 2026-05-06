@@ -223,9 +223,9 @@ export default function App() {
         title: "송산초 학부모 알림이",
         description: "새로운 행사 참석자 조사가 있습니다. 아래 버튼을 눌러 인원을 알려주세요!",
         imageUrl: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=800&auto=format&fit=crop",
-        link: { mobileWebUrl: "https://9m6fxn.csb.app/", webUrl: "https://9m6fxn.csb.app/" },
+        link: { mobileWebUrl: "https://wizardly-breeze-9m6fxn.vercel.app/", webUrl: "https://wizardly-breeze-9m6fxn.vercel.app/" },
       },
-      buttons: [{ title: "참석 인원 입력하기 📝", link: { mobileWebUrl: "https://9m6fxn.csb.app/", webUrl: "https://9m6fxn.csb.app/" } }],
+      buttons: [{ title: "참석 인원 입력하기 📝", link: { mobileWebUrl: "https://wizardly-breeze-9m6fxn.vercel.app/", webUrl: "https://wizardly-breeze-9m6fxn.vercel.app/" } }],
     });
   };
 
