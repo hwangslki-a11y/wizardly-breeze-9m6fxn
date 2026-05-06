@@ -387,7 +387,7 @@ export default function App() {
               style={{ ...styles.input, marginBottom: "0", fontSize: "0.85rem", backgroundColor: "#F9FAFB", borderColor: "#E5E7EB" }} 
               value={memo} 
               onChange={(e) => setMemo(e.target.value)} 
-              placeholder="메모를 입력하세요 (사유, 알레르기 등)" 
+              placeholder="메모를 입력하세요" 
             />
           </div>
           
