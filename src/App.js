@@ -23,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // 확인된 JavaScript 대표 키
-const KAKAO_KEY = "031da65ff98ab37bab536fcfc3ce4f03";
+const KAKAO_KEY = "4080c5f3d9bb80450755ae2530fd2fef";
 
 export default function App() {
   const [surveys, setSurveys] = useState([]);
