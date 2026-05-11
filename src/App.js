@@ -374,9 +374,15 @@ export default function App() {
 
           <div style={{ textAlign: "center", margin: "20px 0" }}>
             {/* ✨ 제목 옆에 정보(ℹ️) 아이콘 추가 */}
-            <h2 style={{ margin: "0 0 15px 0", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px" }}>
+            <h2 style={{ margin: "0 0 15px 0", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               {currentSurvey.title}
-              <button onClick={openDetailsModal} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.4rem", padding: 0, color: "#EA580C" }} title="상세 내용 보기">ℹ️</button>
+              <button 
+                onClick={openDetailsModal} 
+                style={{ background: "#FFF7ED", border: "1px solid #FDBA74", borderRadius: "8px", cursor: "pointer", fontSize: "0.85rem", padding: "6px 10px", color: "#EA580C", fontWeight: "bold" }} 
+                title="상세 내용 보기"
+              >
+                🔍 상세 안내
+              </button>
             </h2>
             
             <div style={{ backgroundColor: "white", padding: "15px", borderRadius: "12px", display: "inline-block", textAlign: "left", lineHeight: "1.6", border: "1px solid #FFEDD5" }}>
